@@ -3,9 +3,10 @@ pipeline {
 
     stages {
 
-        stage('GitHub Checkout') {
+        stage('Checkout Code') {
             steps {
-                git 'https://github.com/MaheshMelmatti/smart-agri-devsecops.git'
+                git branch: 'devsecops-pipeline',
+                url: 'https://github.com/MaheshMelmatti/smart-agri-devsecops.git'
             }
         }
 
