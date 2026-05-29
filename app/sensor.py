@@ -3,105 +3,96 @@ import time
 import csv
 import boto3
 from datetime import datetime
+from prometheus_client import start_http_server, Gauge
 
-# ==============================
-# AWS S3 CONFIGURATION
-# ==============================
-
+# =========================
+# AWS S3 Configuration
+# =========================
 BUCKET_NAME = "smart-agri-bucket1"
 FILE_NAME = "sensor_data.csv"
 
-# Create AWS S3 client
 s3 = boto3.client('s3')
 
-# ==============================
-# CREATE CSV FILE WITH HEADERS
-# ==============================
+# =========================
+# Prometheus Metrics
+# =========================
+soil_metric = Gauge('soil_moisture', 'Soil Moisture Level')
+temp_metric = Gauge('temperature', 'Temperature')
+humidity_metric = Gauge('humidity', 'Humidity')
 
+# Start Prometheus metrics server
+start_http_server(8000)
+
+print("Smart Agriculture Monitoring Started...")
+print("Prometheus metrics running on port 8000")
+
+# =========================
+# CSV Header
+# =========================
 with open(FILE_NAME, mode='w', newline='') as file:
     writer = csv.writer(file)
-
     writer.writerow([
         "Timestamp",
-        "SoilMoisture",
+        "Soil Moisture",
         "Temperature",
         "Humidity",
         "Status"
     ])
 
-print("====================================")
-print(" Smart Agriculture Monitoring Started")
-print(" Real-Time Sensor Simulation Running")
-print("====================================\n")
-
-# ==============================
-# REAL-TIME SENSOR SIMULATION
-# ==============================
-
+# =========================
+# Real-Time Monitoring Loop
+# =========================
 while True:
 
-    # Generate random sensor values
-    moisture = random.randint(20, 90)
-    temperature = random.randint(25, 40)
-    humidity = random.randint(40, 80)
-
-    # Current timestamp
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Irrigation alert logic
-    status = "Normal"
+    soil_moisture = random.randint(10, 90)
+    temperature = random.randint(20, 40)
+    humidity = random.randint(30, 80)
 
-    if moisture < 30:
-        status = "Irrigation Alert Triggered"
+    # Irrigation Alert Logic
+    if soil_moisture < 30:
+        alert = "Irrigation Alert Triggered"
+    else:
+        alert = "Normal"
 
-    # ==============================
-    # DISPLAY LIVE DATA
-    # ==============================
+    # =========================
+    # Update Prometheus Metrics
+    # =========================
+    soil_metric.set(soil_moisture)
+    temp_metric.set(temperature)
+    humidity_metric.set(humidity)
 
-    print("====================================")
-    print(f"Timestamp       : {timestamp}")
-    print(f"Soil Moisture   : {moisture}")
-    print(f"Temperature     : {temperature}")
-    print(f"Humidity        : {humidity}")
-    print(f"System Status   : {status}")
-    print("====================================")
+    # =========================
+    # Print Data
+    # =========================
+    print("\nTimestamp:", timestamp)
+    print("Soil Moisture:", soil_moisture)
+    print("Temperature:", temperature)
+    print("Humidity:", humidity)
+    print("Status:", alert)
 
-    # ==============================
-    # SAVE DATA TO CSV
-    # ==============================
-
+    # =========================
+    # Save to CSV
+    # =========================
     with open(FILE_NAME, mode='a', newline='') as file:
-
         writer = csv.writer(file)
-
         writer.writerow([
             timestamp,
-            moisture,
+            soil_moisture,
             temperature,
             humidity,
-            status
+            alert
         ])
 
-    # ==============================
-    # UPLOAD CSV TO AWS S3
-    # ==============================
-
+    # =========================
+    # Upload to AWS S3
+    # =========================
     try:
-
-        s3.upload_file(
-            FILE_NAME,
-            BUCKET_NAME,
-            FILE_NAME
-        )
-
-        print(" Uploaded to AWS S3 Successfully\n")
-
+        s3.upload_file(FILE_NAME, BUCKET_NAME, FILE_NAME)
+        print("Uploaded to S3 successfully")
     except Exception as e:
+        print("S3 Upload Error:", e)
 
-        print(" S3 Upload Error:", e)
-
-    # ==============================
-    # REAL-TIME DELAY
-    # ==============================
-
-    time.sleep(2)
+    # Wait 5 seconds
+    time.sleep(10)
