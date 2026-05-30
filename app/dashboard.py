@@ -40,14 +40,14 @@ def metrics_data():
         humidity    = float(latest["humidity"])
         status      = "Irrigation Alert" if soil < 30 else "Normal"
 
-        # Check if last reading is stale (older than 60 seconds)
-        from datetime import datetime, timezone
+        # Check if last reading is stale (older than 5 minutes)
+        from datetime import datetime
         try:
-            last_time = datetime.strptime(str(latest["timestamp"]), "%Y-%m-%d %H:%M:%S")
-            age_seconds = (datetime.now() - last_time).total_seconds()
-            sensor_online = age_seconds < 60
+            last_time    = datetime.strptime(str(latest["timestamp"]), "%Y-%m-%d %H:%M:%S")
+            age_seconds  = abs((datetime.utcnow() - last_time).total_seconds())
+            sensor_online = age_seconds < 300  # 5 minutes tolerance
         except:
-            sensor_online = True  # can't parse time, assume ok
+            sensor_online = True
 
         return jsonify({
             "soil": soil, "temperature": temperature,
