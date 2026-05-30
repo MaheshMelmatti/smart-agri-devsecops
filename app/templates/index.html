@@ -1,185 +1,589 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Agriculture Dashboard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-    <title>Smart Agriculture Dashboard</title>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    :root {
+      --green:  #22c55e; --green-dim:  rgba(34,197,94,0.15);
+      --orange: #fb923c; --orange-dim: rgba(251,146,60,0.15);
+      --blue:   #38bdf8; --blue-dim:   rgba(56,189,248,0.15);
+      --red:    #f87171; --red-dim:    rgba(248,113,113,0.15);
+      --yellow: #facc15;
+      --bg:     #030712;
+      --card:   rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.07);
+      --text:   #f1f5f9;
+      --muted:  #475569;
+    }
 
-    <style>
+    html { scroll-behavior: smooth; }
 
-        body{
-            background:#0f172a;
-            color:white;
-            font-family:Arial;
-            text-align:center;
-            padding:20px;
-        }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-        h1{
-            color:#38bdf8;
-        }
+    /* ── Animated BG ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 50% at 10% 0%,   rgba(34,197,94,0.10) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 90% 100%, rgba(56,189,248,0.08) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 30% at 50% 50%,  rgba(99,102,241,0.05) 0%, transparent 60%);
+    }
 
-        .container{
-            display:flex;
-            justify-content:center;
-            gap:20px;
-            margin-top:30px;
-            flex-wrap:wrap;
-        }
+    .page { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 28px 24px 48px; }
 
-        .card{
-            background:#1e293b;
-            padding:25px;
-            border-radius:15px;
-            width:220px;
-            box-shadow:0px 0px 15px rgba(0,0,0,0.5);
-        }
+    /* ══════════════════════════════════════
+       HEADER
+    ══════════════════════════════════════ */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px; margin-bottom: 36px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
 
-        .value{
-            font-size:40px;
-            margin-top:10px;
-            color:#22c55e;
-        }
+    .brand { display: flex; align-items: center; gap: 14px; }
 
-        .status{
-            margin-top:30px;
-            font-size:28px;
-            color:#facc15;
-        }
+    .logo {
+      width: 52px; height: 52px; border-radius: 16px; flex-shrink: 0;
+      background: linear-gradient(135deg, #16a34a, #22c55e, #4ade80);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.3), 0 8px 32px rgba(34,197,94,0.25);
+    }
 
-        canvas{
-            margin-top:40px;
-            background:white;
-            border-radius:10px;
-            padding:10px;
-        }
+    .brand-text h1 {
+      font-size: 21px; font-weight: 800; color: #fff; letter-spacing: -0.5px;
+      background: linear-gradient(90deg, #fff 60%, #22c55e);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .brand-text p { font-size: 12px; color: var(--muted); margin-top: 3px; letter-spacing: 0.3px; }
 
-    </style>
+    .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
+    .pill {
+      display: flex; align-items: center; gap: 7px;
+      border-radius: 999px; padding: 7px 16px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
+    }
+    .pill-live {
+      background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); color: var(--green);
+      transition: background .4s, border-color .4s, color .4s;
+    }
+    .pill-live.offline {
+      background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); color: var(--red);
+    }
+    .pill-time { background: var(--card); border: 1px solid var(--border); color: var(--muted); font-weight: 400; }
+
+    .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1.6s infinite; transition: background .4s; }
+    .pill-live.offline .pulse { background: var(--red); animation: none; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.35;transform:scale(1.5)} }
+
+    /* ── Sensor Banner ── */
+    .sensor-banner {
+      display: none;
+      align-items: center; gap: 16px;
+      background: rgba(248,113,113,0.07);
+      border: 1px solid rgba(248,113,113,0.25);
+      border-radius: 16px; padding: 16px 22px;
+      margin-bottom: 20px;
+      animation: fadeIn .4s ease;
+    }
+    .sensor-banner.show { display: flex; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+    .sb-icon { font-size: 28px; flex-shrink: 0; }
+    .sb-text { flex: 1; }
+    .sb-title { font-size: 14px; font-weight: 700; color: var(--red); }
+    .sb-desc  { font-size: 12px; color: #94a3b8; margin-top: 3px; }
+    .sb-cmd {
+      font-family: monospace; font-size: 12px; color: #64748b;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px; padding: 6px 14px; white-space: nowrap; flex-shrink: 0;
+    }
+    .sb-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+      background: var(--red); animation: sbpulse 1.2s infinite;
+    }
+    @keyframes sbpulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    /* ══════════════════════════════════════
+       METRIC CARDS
+    ══════════════════════════════════════ */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px; margin-bottom: 20px;
+    }
+    @media(max-width:768px){ .cards { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 22px; padding: 26px;
+      position: relative; overflow: hidden;
+      transition: transform .25s, box-shadow .25s;
+      cursor: default;
+    }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 24px 48px rgba(0,0,0,0.5); }
+
+    /* glow blob */
+    .card::after {
+      content: ''; position: absolute;
+      width: 160px; height: 160px; border-radius: 50%;
+      top: -50px; right: -50px; opacity: 0.12; pointer-events: none;
+    }
+    .card.soil::after  { background: var(--green);  }
+    .card.temp::after  { background: var(--orange); }
+    .card.humid::after { background: var(--blue);   }
+
+    /* top accent line */
+    .card::before {
+      content: ''; position: absolute; top: 0; left: 24px; right: 24px;
+      height: 2px; border-radius: 0 0 4px 4px;
+    }
+    .card.soil::before  { background: linear-gradient(90deg, transparent, var(--green),  transparent); }
+    .card.temp::before  { background: linear-gradient(90deg, transparent, var(--orange), transparent); }
+    .card.humid::before { background: linear-gradient(90deg, transparent, var(--blue),   transparent); }
+
+    .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+
+    .card-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; }
+
+    .icon-box {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 17px;
+    }
+    .card.soil  .icon-box { background: var(--green-dim);  }
+    .card.temp  .icon-box { background: var(--orange-dim); }
+    .card.humid .icon-box { background: var(--blue-dim);   }
+
+    .card-body { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+
+    .card-num { font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -3px; }
+    .card.soil  .card-num { color: var(--green);  }
+    .card.temp  .card-num { color: var(--orange); }
+    .card.humid .card-num { color: var(--blue);   }
+
+    .card-meta { text-align: right; padding-bottom: 6px; }
+    .card-unit { font-size: 13px; color: var(--muted); }
+    .badge {
+      display: inline-block; margin-top: 8px;
+      font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+    }
+    .badge-up   { background: rgba(34,197,94,0.12);  color: var(--green);  }
+    .badge-down { background: rgba(248,113,113,0.12); color: var(--red);    }
+    .badge-flat { background: rgba(71,85,105,0.2);    color: var(--muted);  }
+
+    /* progress bar */
+    .bar-track { margin-top: 20px; height: 5px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; }
+    .bar-fill  { height: 100%; border-radius: 999px; transition: width .9s cubic-bezier(.4,0,.2,1); }
+    .card.soil  .bar-fill { background: linear-gradient(90deg, #16a34a, #22c55e, #86efac); }
+    .card.temp  .bar-fill { background: linear-gradient(90deg, #ea580c, #fb923c, #fdba74); }
+    .card.humid .bar-fill { background: linear-gradient(90deg, #0284c7, #38bdf8, #7dd3fc); }
+
+    /* ══════════════════════════════════════
+       STATUS + INFO ROW
+    ══════════════════════════════════════ */
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 20px; }
+    @media(max-width:768px){ .row2 { grid-template-columns: 1fr; } }
+
+    .status-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 22px; padding: 26px;
+      display: flex; align-items: center; gap: 20px;
+      transition: transform .25s;
+    }
+    .status-card:hover { transform: translateY(-3px); }
+
+    .status-icon {
+      width: 64px; height: 64px; border-radius: 18px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 30px;
+      transition: background .4s;
+    }
+    .status-icon.ok      { background: var(--green-dim);  box-shadow: 0 0 24px rgba(34,197,94,0.2); }
+    .status-icon.bad     { background: var(--red-dim);    box-shadow: 0 0 24px rgba(248,113,113,0.2); }
+    .status-icon.waiting { background: rgba(71,85,105,0.2); }
+
+    .status-info .s-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .status-info .s-val   { font-size: 24px; font-weight: 800; margin-top: 6px; letter-spacing: -0.5px; }
+    .status-info .s-desc  { font-size: 13px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+    .s-val.ok   { color: var(--green); }
+    .s-val.bad  { color: var(--red);   }
+    .s-val.wait { color: var(--muted); }
+
+    /* info tiles */
+    .info-grid {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 22px; padding: 26px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    .info-tile { text-align: center; }
+    .info-tile .i-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .info-tile .i-val   { font-size: 26px; font-weight: 800; color: #fff; margin-top: 6px; }
+    .info-tile .i-sub   { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .divider-v { width: 1px; background: var(--border); border-radius: 1px; }
+    .divider-h { height: 1px; background: var(--border); border-radius: 1px; grid-column: 1/-1; }
+
+    /* ══════════════════════════════════════
+       CHART
+    ══════════════════════════════════════ */
+    .chart-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 22px; padding: 28px; margin-bottom: 20px;
+    }
+    .chart-top {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px; margin-bottom: 24px;
+    }
+    .chart-title { font-size: 16px; font-weight: 700; color: #fff; }
+    .chart-sub   { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+    .legend { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+    .leg { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #94a3b8; }
+    .leg-line { width: 20px; height: 3px; border-radius: 2px; }
+
+    .chart-wrap { position: relative; height: 280px; }
+
+    /* ══════════════════════════════════════
+       FOOTER STATS
+    ══════════════════════════════════════ */
+    .footer-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+      gap: 14px;
+    }
+    .fstat {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 18px 16px; text-align: center;
+      transition: transform .2s;
+    }
+    .fstat:hover { transform: translateY(-2px); }
+    .fstat .f-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .fstat .f-val   { font-size: 22px; font-weight: 800; color: #fff; margin-top: 8px; }
+    .fstat .f-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  </style>
 </head>
-
 <body>
+<!-- ── Sensor Offline Overlay (removed, replaced by inline banner) ── -->
 
-    <h1>Smart Agriculture Monitoring Dashboard</h1>
+<div class="page">
 
-    <div class="container">
+  <!-- ── Header ── -->
+  <header>
+    <div class="brand">
+      <div class="logo">🌱</div>
+      <div class="brand-text">
+        <h1>Smart Agriculture</h1>
+        <p>Real-Time Field Monitoring &amp; Analytics</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="pill pill-live" id="livePill"><span class="pulse" id="liveDot"></span><span id="liveText">LIVE DATA</span></div>
+      <div class="pill pill-time" id="lastUpdate">Connecting...</div>
+    </div>
+  </header>
 
-        <div class="card">
-            <h2>Soil Moisture</h2>
-            <div class="value" id="soil">0</div>
+  <!-- ── Sensor Status Banner ── -->
+  <div class="sensor-banner" id="sensorBanner">
+    <div class="sb-dot"></div>
+    <div class="sb-icon">📡</div>
+    <div class="sb-text">
+      <div class="sb-title">Sensor Not Connected — No Live Data</div>
+      <div class="sb-desc">Please start the sensor script to receive real-time field data. Dashboard will resume automatically.</div>
+    </div>
+    <div class="sb-cmd">python sensor.py</div>
+  </div>
+
+  <!-- ── Metric Cards ── -->
+  <div class="cards">
+    <div class="card soil">
+      <div class="card-head">
+        <span class="card-label">Soil Moisture</span>
+        <div class="icon-box">💧</div>
+      </div>
+      <div class="card-body">
+        <div class="card-num" id="soilVal">--</div>
+        <div class="card-meta">
+          <div class="card-unit">% VWC</div>
+          <div class="badge badge-flat" id="soilBadge">-- Stable</div>
         </div>
-
-        <div class="card">
-            <h2>Temperature</h2>
-            <div class="value" id="temperature">0</div>
-        </div>
-
-        <div class="card">
-            <h2>Humidity</h2>
-            <div class="value" id="humidity">0</div>
-        </div>
-
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="soilBar" style="width:0%"></div></div>
     </div>
 
-    <div class="status" id="status">
-        STATUS
+    <div class="card temp">
+      <div class="card-head">
+        <span class="card-label">Temperature</span>
+        <div class="icon-box">🌡️</div>
+      </div>
+      <div class="card-body">
+        <div class="card-num" id="tempVal">--</div>
+        <div class="card-meta">
+          <div class="card-unit">°C Ambient</div>
+          <div class="badge badge-flat" id="tempBadge">-- Stable</div>
+        </div>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="tempBar" style="width:0%"></div></div>
     </div>
 
-    <canvas id="myChart" width="800" height="300"></canvas>
+    <div class="card humid">
+      <div class="card-head">
+        <span class="card-label">Humidity</span>
+        <div class="icon-box">🌫️</div>
+      </div>
+      <div class="card-body">
+        <div class="card-num" id="humidVal">--</div>
+        <div class="card-meta">
+          <div class="card-unit">% RH</div>
+          <div class="badge badge-flat" id="humidBadge">-- Stable</div>
+        </div>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="humidBar" style="width:0%"></div></div>
+    </div>
+  </div>
 
-    <script>
+  <!-- ── Status + Info ── -->
+  <div class="row2">
+    <div class="status-card">
+      <div class="status-icon waiting" id="statusIcon">⏳</div>
+      <div class="status-info">
+        <div class="s-label">Field Status</div>
+        <div class="s-val wait" id="statusVal">Loading...</div>
+        <div class="s-desc" id="statusDesc">Fetching latest sensor data from field</div>
+      </div>
+    </div>
 
-        const ctx = document.getElementById('myChart');
+    <div class="info-grid">
+      <div class="info-tile">
+        <div class="i-label">Total Alerts</div>
+        <div class="i-val" id="alertCount" style="color:#f87171">0</div>
+        <div class="i-sub">This session</div>
+      </div>
+      <div class="divider-v"></div>
+      <div class="info-tile">
+        <div class="i-label">Readings</div>
+        <div class="i-val" id="readingCount" style="color:#38bdf8">0</div>
+        <div class="i-sub">Collected</div>
+      </div>
+      <div class="divider-h"></div>
+      <div class="info-tile">
+        <div class="i-label">Refresh Rate</div>
+        <div class="i-val" style="color:#facc15">5s</div>
+        <div class="i-sub">Auto update</div>
+      </div>
+      <div class="divider-v"></div>
+      <div class="info-tile">
+        <div class="i-label">Data Source</div>
+        <div class="i-val" style="color:#a78bfa;font-size:18px">AWS S3</div>
+        <div class="i-sub">Cloud sync</div>
+      </div>
+    </div>
+  </div>
 
-        const chart = new Chart(ctx, {
+  <!-- ── Chart ── -->
+  <div class="chart-card">
+    <div class="chart-top">
+      <div>
+        <div class="chart-title">Sensor Trends</div>
+        <div class="chart-sub">Live readings — last 10 data points</div>
+      </div>
+      <div class="legend">
+        <div class="leg"><div class="leg-line" style="background:#22c55e"></div>Soil Moisture</div>
+        <div class="leg"><div class="leg-line" style="background:#fb923c"></div>Temperature</div>
+        <div class="leg"><div class="leg-line" style="background:#38bdf8"></div>Humidity</div>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="myChart"></canvas>
+    </div>
+  </div>
 
-            type: 'line',
+  <!-- ── Footer Stats ── -->
+  <div class="footer-stats">
+    <div class="fstat">
+      <div class="f-label">Soil Min</div>
+      <div class="f-val" id="soilMin" style="color:#22c55e">--</div>
+      <div class="f-sub">Lowest reading</div>
+    </div>
+    <div class="fstat">
+      <div class="f-label">Soil Max</div>
+      <div class="f-val" id="soilMax" style="color:#22c55e">--</div>
+      <div class="f-sub">Highest reading</div>
+    </div>
+    <div class="fstat">
+      <div class="f-label">Temp Min</div>
+      <div class="f-val" id="tempMin" style="color:#fb923c">--</div>
+      <div class="f-sub">Lowest reading</div>
+    </div>
+    <div class="fstat">
+      <div class="f-label">Temp Max</div>
+      <div class="f-val" id="tempMax" style="color:#fb923c">--</div>
+      <div class="f-sub">Highest reading</div>
+    </div>
+    <div class="fstat">
+      <div class="f-label">Humidity Min</div>
+      <div class="f-val" id="humidMin" style="color:#38bdf8">--</div>
+      <div class="f-sub">Lowest reading</div>
+    </div>
+    <div class="fstat">
+      <div class="f-label">Humidity Max</div>
+      <div class="f-val" id="humidMax" style="color:#38bdf8">--</div>
+      <div class="f-sub">Highest reading</div>
+    </div>
+  </div>
 
-            data: {
+</div>
 
-                labels: [],
-
-                datasets: [
-
-                    {
-                        label: 'Soil Moisture',
-                        data: [],
-                        borderColor: 'green',
-                        fill:false
-                    },
-
-                    {
-                        label: 'Temperature',
-                        data: [],
-                        borderColor: 'red',
-                        fill:false
-                    },
-
-                    {
-                        label: 'Humidity',
-                        data: [],
-                        borderColor: 'blue',
-                        fill:false
-                    }
-
-                ]
-            },
-
-            options: {
-                responsive:true
-            }
-
-        });
-
-        async function fetchData(){
-
-            const response = await fetch('/metrics-data');
-
-            const data = await response.json();
-
-            document.getElementById('soil').innerHTML =
-                data.soil;
-
-            document.getElementById('temperature').innerHTML =
-                data.temperature;
-
-            document.getElementById('humidity').innerHTML =
-                data.humidity;
-
-            document.getElementById('status').innerHTML =
-                data.status;
-
-            const time =
-                new Date().toLocaleTimeString();
-
-            chart.data.labels.push(time);
-
-            chart.data.datasets[0].data.push(data.soil);
-
-            chart.data.datasets[1].data.push(data.temperature);
-
-            chart.data.datasets[2].data.push(data.humidity);
-
-            if(chart.data.labels.length > 10){
-
-                chart.data.labels.shift();
-
-                chart.data.datasets.forEach(dataset => {
-                    dataset.data.shift();
-                });
-            }
-
-            chart.update();
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  const chart = new Chart(document.getElementById('myChart'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        { label:'Soil Moisture', data:[], borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.08)',  fill:true, tension:0.4, pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#22c55e', borderWidth:2.5 },
+        { label:'Temperature',   data:[], borderColor:'#fb923c', backgroundColor:'rgba(251,146,60,0.08)', fill:true, tension:0.4, pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#fb923c', borderWidth:2.5 },
+        { label:'Humidity',      data:[], borderColor:'#38bdf8', backgroundColor:'rgba(56,189,248,0.08)', fill:true, tension:0.4, pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#38bdf8', borderWidth:2.5 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ display:false },
+        tooltip:{
+          backgroundColor:'rgba(3,7,18,0.95)',
+          borderColor:'rgba(255,255,255,0.08)', borderWidth:1,
+          titleColor:'#64748b', bodyColor:'#f1f5f9',
+          padding:14, cornerRadius:12,
+          callbacks:{
+            label: ctx => `  ${ctx.dataset.label}: ${ctx.parsed.y}`
+          }
         }
+      },
+      scales:{
+        x:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#334155', font:{size:11} } },
+        y:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#334155', font:{size:11} }, min:0, max:100,
+            border:{ dash:[4,4] } }
+      }
+    }
+  });
 
-        setInterval(fetchData, 5000);
+  let alerts=0, readings=0, prevSoil=null, prevTemp=null, prevHumid=null;
+  const soilArr=[], tempArr=[], humidArr=[];
 
-        fetchData();
+  function trend(cur, prev, id) {
+    const el = document.getElementById(id);
+    if (prev === null) { el.className='badge badge-flat'; el.textContent='-- Stable'; return; }
+    if (cur > prev)    { el.className='badge badge-up';   el.textContent='▲ Rising';  }
+    else if(cur < prev){ el.className='badge badge-down'; el.textContent='▼ Falling'; }
+    else               { el.className='badge badge-flat'; el.textContent='-- Stable'; }
+  }
 
-    </script>
+  function setSensorState(online) {
+    const banner  = document.getElementById('sensorBanner');
+    const pill    = document.getElementById('livePill');
+    const liveText= document.getElementById('liveText');
 
+    if (online) {
+      banner.classList.remove('show');
+      pill.classList.remove('offline');
+      liveText.textContent = 'LIVE DATA';
+    } else {
+      banner.classList.add('show');
+      pill.classList.add('offline');
+      liveText.textContent = 'SENSOR OFFLINE';
+    }
+  }
+
+  async function fetchData() {
+    try {
+      const res  = await fetch('/metrics-data');
+      const data = await res.json();
+
+      const soil   = data.soil;
+      const temp   = data.temperature;
+      const humid  = data.humidity;
+      const status = data.status;
+      const online = data.sensor_online !== false;
+
+      setSensorState(online);
+      if (!online) return;
+
+      document.getElementById('soilVal').textContent  = soil  != null ? Math.round(soil)  : '--';
+      document.getElementById('tempVal').textContent  = temp  != null ? Math.round(temp)  : '--';
+      document.getElementById('humidVal').textContent = humid != null ? Math.round(humid) : '--';
+
+      document.getElementById('soilBar').style.width  = soil  != null ? Math.min(soil,100)+'%'        : '0%';
+      document.getElementById('tempBar').style.width  = temp  != null ? Math.min(temp/50*100,100)+'%' : '0%';
+      document.getElementById('humidBar').style.width = humid != null ? Math.min(humid,100)+'%'       : '0%';
+
+      trend(soil,  prevSoil,  'soilBadge');
+      trend(temp,  prevTemp,  'tempBadge');
+      trend(humid, prevHumid, 'humidBadge');
+      prevSoil=soil; prevTemp=temp; prevHumid=humid;
+
+      const si = document.getElementById('statusIcon');
+      const sv = document.getElementById('statusVal');
+      const sd = document.getElementById('statusDesc');
+      if (status && status.includes('Irrigation')) {
+        si.className='status-icon bad'; si.textContent='🚨';
+        sv.className='s-val bad'; sv.textContent='Irrigation Alert';
+        sd.textContent='Soil moisture critically low — activate irrigation now';
+        alerts++;
+      } else if (status === 'Normal') {
+        si.className='status-icon ok'; si.textContent='✅';
+        sv.className='s-val ok'; sv.textContent='All Systems Normal';
+        sd.textContent='Field conditions are within optimal range';
+      } else {
+        si.className='status-icon waiting'; si.textContent='⏳';
+        sv.className='s-val wait'; sv.textContent=status||'No Data';
+        sd.textContent='Waiting for sensor readings';
+      }
+
+      if (soil!=null && temp!=null && humid!=null) {
+        const t = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        chart.data.labels.push(t);
+        chart.data.datasets[0].data.push(soil);
+        chart.data.datasets[1].data.push(temp);
+        chart.data.datasets[2].data.push(humid);
+        if (chart.data.labels.length > 10) {
+          chart.data.labels.shift();
+          chart.data.datasets.forEach(d => d.data.shift());
+        }
+        chart.update();
+        soilArr.push(soil); tempArr.push(temp); humidArr.push(humid);
+        readings++;
+      }
+
+      if (soilArr.length)  { document.getElementById('soilMin').textContent=Math.min(...soilArr);  document.getElementById('soilMax').textContent=Math.max(...soilArr); }
+      if (tempArr.length)  { document.getElementById('tempMin').textContent=Math.min(...tempArr);  document.getElementById('tempMax').textContent=Math.max(...tempArr); }
+      if (humidArr.length) { document.getElementById('humidMin').textContent=Math.min(...humidArr); document.getElementById('humidMax').textContent=Math.max(...humidArr); }
+
+      document.getElementById('alertCount').textContent   = alerts;
+      document.getElementById('readingCount').textContent = readings;
+      document.getElementById('lastUpdate').textContent   = 'Updated ' + new Date().toLocaleTimeString();
+
+    } catch(err) {
+      console.error('fetchData error:', err);
+      setSensorState(false);
+    }
+  }
+
+  fetchData();
+  setInterval(fetchData, 5000);
+</script>
 </body>
-
 </html>
