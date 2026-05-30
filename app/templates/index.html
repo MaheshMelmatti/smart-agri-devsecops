@@ -518,9 +518,8 @@
       const humid  = data.humidity;
       const status = data.status;
       const online = data.sensor_online !== false;
-
       setSensorState(online);
-      if (!online) return;
+      if (!online && data.soil == null) return;
 
       document.getElementById('soilVal').textContent  = soil  != null ? Math.round(soil)  : '--';
       document.getElementById('tempVal').textContent  = temp  != null ? Math.round(temp)  : '--';

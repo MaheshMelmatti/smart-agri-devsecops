@@ -12,11 +12,18 @@ FILE_PATH = os.path.join(BASE_DIR, "sensor_data.csv")
 
 def fetch_csv_from_s3():
     try:
-        s3 = boto3.client('s3')
+        s3 = boto3.client(
+            's3',
+            aws_access_key_id     = os.environ.get("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key = os.environ.get("AWS_SECRET_ACCESS_KEY"),
+            region_name           = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
+        )
         s3.download_file(BUCKET_NAME, "sensor_data.csv", FILE_PATH)
         print("S3 download OK -> " + FILE_PATH)
+        return True
     except Exception as e:
-        print(f"S3 download error: {e}")
+        print("S3 download error: " + str(e))
+        return False
 
 @app.route('/')
 def home():
@@ -25,7 +32,11 @@ def home():
 @app.route('/metrics-data')
 def metrics_data():
     try:
-        fetch_csv_from_s3()
+        s3_ok = fetch_csv_from_s3()
+
+        if not s3_ok and not os.path.exists(FILE_PATH):
+            return jsonify({"soil": None, "temperature": None, "humidity": None,
+                            "status": "No Data", "sensor_online": False})
 
         df = pd.read_csv(FILE_PATH)
         df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
@@ -40,19 +51,10 @@ def metrics_data():
         humidity    = float(latest["humidity"])
         status      = "Irrigation Alert" if soil < 30 else "Normal"
 
-        # Check if last reading is stale (older than 5 minutes)
-        from datetime import datetime
-        try:
-            last_time    = datetime.strptime(str(latest["timestamp"]), "%Y-%m-%d %H:%M:%S")
-            age_seconds  = abs((datetime.utcnow() - last_time).total_seconds())
-            sensor_online = age_seconds < 300  # 5 minutes tolerance
-        except:
-            sensor_online = True
-
         return jsonify({
             "soil": soil, "temperature": temperature,
             "humidity": humidity, "status": status,
-            "sensor_online": sensor_online
+            "sensor_online": True
         })
 
     except Exception as e:
