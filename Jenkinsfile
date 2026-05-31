@@ -18,7 +18,9 @@ pipeline {
 
         stage('Run Docker Container') {
             steps {
-                bat 'docker run -d smart-agri'
+                bat 'docker stop smart-agri-container || exit 0'
+                bat 'docker rm smart-agri-container || exit 0'
+                bat 'docker run -d --name smart-agri-container -p 5000:5000 smart-agri'
             }
         }
     }
