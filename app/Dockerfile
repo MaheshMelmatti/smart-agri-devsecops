@@ -4,6 +4,8 @@ WORKDIR /app
 
 COPY . .
 
-RUN pip install -r requirements.txt
+RUN pip install --timeout=120 --retries=5 -r requirements.txt
 
-CMD ["python", "sensor.py"]
+EXPOSE 5000
+
+CMD ["gunicorn", "dashboard:app", "--bind", "0.0.0.0:5000"]
