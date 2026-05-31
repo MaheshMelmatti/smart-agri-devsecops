@@ -89,7 +89,15 @@ while True:
     # Upload to AWS S3
     # =========================
     try:
-        s3.upload_file(FILE_NAME, BUCKET_NAME, FILE_NAME)
+        # Read full file content first, then upload to avoid IncompleteBody
+        with open(FILE_NAME, 'rb') as f:
+            file_content = f.read()
+        s3.put_object(
+            Bucket=BUCKET_NAME,
+            Key=FILE_NAME,
+            Body=file_content,
+            ContentLength=len(file_content)
+        )
         print("Uploaded to S3 successfully")
     except Exception as e:
         print("S3 Upload Error:", e)
