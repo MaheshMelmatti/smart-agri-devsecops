@@ -10,19 +10,33 @@ BUCKET_NAME   = os.environ.get("S3_BUCKET", "smart-agri-bucket1")
 FILE_PATH     = os.path.join(BASE_DIR, "sensor_data.csv")
 sprinkler_on  = False
 
+def get_s3_client():
+    return boto3.client(
+        "s3",
+        aws_access_key_id     = os.environ.get("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key = os.environ.get("AWS_SECRET_ACCESS_KEY"),
+        region_name           = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
+    )
+
 def fetch_csv_from_s3():
     try:
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id     = os.environ.get("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key = os.environ.get("AWS_SECRET_ACCESS_KEY"),
-            region_name           = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
-        )
+        s3 = get_s3_client()
         s3.download_file(BUCKET_NAME, "sensor_data.csv", FILE_PATH)
         return True
     except Exception as e:
         print("S3 error: " + str(e))
         return False
+
+def get_s3_last_modified():
+    try:
+        from datetime import datetime, timezone
+        s3  = get_s3_client()
+        obj = s3.head_object(Bucket=BUCKET_NAME, Key="sensor_data.csv")
+        age = (datetime.now(timezone.utc) - obj["LastModified"]).total_seconds()
+        return age
+    except Exception as e:
+        print("S3 head_object error: " + str(e))
+        return None
 
 @app.route("/")
 def home():
@@ -48,18 +62,12 @@ def metrics_data():
         else:
             status = "Normal"
             sprinkler_on = False
-        # Check if data is stale (older than 30 seconds)
-        from datetime import datetime, timezone
-        sensor_online = False
-        if "timestamp" in df.columns:
-            try:
-                last_ts = datetime.strptime(str(latest["timestamp"]), "%Y-%m-%d %H:%M:%S")
-                age = (datetime.now() - last_ts).total_seconds()
-                sensor_online = age <= 30
-            except Exception:
-                sensor_online = s3_ok
+        # Check sensor online via S3 LastModified (sensor uploads every 10s, allow 30s grace)
+        age = get_s3_last_modified()
+        if age is not None:
+            sensor_online = age <= 30
         else:
-            sensor_online = s3_ok
+            sensor_online = False
         return jsonify({"soil": soil, "temperature": temperature,
                         "humidity": humidity, "status": status,
                         "sensor_online": sensor_online, "sprinkler_on": sprinkler_on})
