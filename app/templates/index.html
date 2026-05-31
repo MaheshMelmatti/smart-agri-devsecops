@@ -255,6 +255,7 @@
     .leg-line { width: 20px; height: 3px; border-radius: 2px; }
 
     .chart-wrap { position: relative; height: 280px; }
+    @media(max-width:768px){ .chart-wrap { height: 220px; } }
 
     /* ══════════════════════════════════════
        FOOTER STATS
@@ -292,6 +293,7 @@
     <div class="header-right">
       <div class="pill pill-live" id="livePill"><span class="pulse" id="liveDot"></span><span id="liveText">LIVE DATA</span></div>
       <div class="pill pill-time" id="lastUpdate">Connecting...</div>
+      <a href="/logout" style="display:flex;align-items:center;gap:6px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:999px;padding:7px 16px;font-size:12px;font-weight:600;color:#f87171;text-decoration:none;">👋 {{ user_name }}</a>
     </div>
   </header>
 
@@ -300,8 +302,8 @@
     <div class="sb-dot"></div>
     <div class="sb-icon">📡</div>
     <div class="sb-text">
-      <div class="sb-title">Sensor Not Connected — No Live Data</div>
-      <div class="sb-desc">Please start the sensor script to receive real-time field data. Dashboard will resume automatically.</div>
+      <div class="sb-title">⚠️ Sensor Not Connected</div>
+      <div class="sb-desc">No live data available. Please connect and run the sensor to see real-time field data.</div>
     </div>
     <div class="sb-cmd">python sensor.py</div>
   </div>
@@ -392,22 +394,40 @@
     </div>
   </div>
 
-  <!-- ── Chart ── -->
-  <div class="chart-card">
-    <div class="chart-top">
-      <div>
-        <div class="chart-title">Sensor Trends</div>
-        <div class="chart-sub">Live readings — last 10 data points</div>
+  <!-- ── Charts Row ── -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;">
+
+    <!-- Grouped Bar Chart -->
+    <div class="chart-card" style="margin-bottom:0">
+      <div class="chart-top">
+        <div>
+          <div class="chart-title">Sensor Readings</div>
+          <div class="chart-sub">Grouped bar — last 8 readings</div>
+        </div>
+        <div class="legend">
+          <div class="leg"><div class="leg-line" style="background:#22c55e"></div>Soil</div>
+          <div class="leg"><div class="leg-line" style="background:#fb923c"></div>Temp</div>
+          <div class="leg"><div class="leg-line" style="background:#38bdf8"></div>Humidity</div>
+        </div>
       </div>
-      <div class="legend">
-        <div class="leg"><div class="leg-line" style="background:#22c55e"></div>Soil Moisture</div>
-        <div class="leg"><div class="leg-line" style="background:#fb923c"></div>Temperature</div>
-        <div class="leg"><div class="leg-line" style="background:#38bdf8"></div>Humidity</div>
+      <div class="chart-wrap">
+        <canvas id="barChart"></canvas>
       </div>
     </div>
-    <div class="chart-wrap">
-      <canvas id="myChart"></canvas>
+
+    <!-- Horizontal Bar — current snapshot -->
+    <div class="chart-card" style="margin-bottom:0">
+      <div class="chart-top">
+        <div>
+          <div class="chart-title">Current Snapshot</div>
+          <div class="chart-sub">Live sensor values</div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="hbarChart"></canvas>
+      </div>
     </div>
+
   </div>
 
   <!-- ── Footer Stats ── -->
@@ -448,35 +468,45 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
-  const chart = new Chart(document.getElementById('myChart'), {
-    type: 'line',
+  // ── Grouped Bar Chart ──
+  const barChart = new Chart(document.getElementById('barChart'), {
+    type: 'bar',
     data: {
       labels: [],
       datasets: [
-        { label:'Soil Moisture', data:[], borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.08)',  fill:true, tension:0.4, pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#22c55e', borderWidth:2.5 },
-        { label:'Temperature',   data:[], borderColor:'#fb923c', backgroundColor:'rgba(251,146,60,0.08)', fill:true, tension:0.4, pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#fb923c', borderWidth:2.5 },
-        { label:'Humidity',      data:[], borderColor:'#38bdf8', backgroundColor:'rgba(56,189,248,0.08)', fill:true, tension:0.4, pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#38bdf8', borderWidth:2.5 }
+        { label:'Soil Moisture', data:[], backgroundColor:'rgba(34,197,94,0.8)',  borderRadius:6, borderSkipped:false },
+        { label:'Temperature',   data:[], backgroundColor:'rgba(251,146,60,0.8)', borderRadius:6, borderSkipped:false },
+        { label:'Humidity',      data:[], backgroundColor:'rgba(56,189,248,0.8)', borderRadius:6, borderSkipped:false }
       ]
     },
     options: {
       responsive:true, maintainAspectRatio:false,
       interaction:{ mode:'index', intersect:false },
-      plugins:{
-        legend:{ display:false },
-        tooltip:{
-          backgroundColor:'rgba(3,7,18,0.95)',
-          borderColor:'rgba(255,255,255,0.08)', borderWidth:1,
-          titleColor:'#64748b', bodyColor:'#f1f5f9',
-          padding:14, cornerRadius:12,
-          callbacks:{
-            label: ctx => `  ${ctx.dataset.label}: ${ctx.parsed.y}`
-          }
-        }
-      },
+      plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'rgba(3,7,18,0.95)', borderColor:'rgba(255,255,255,0.08)', borderWidth:1, titleColor:'#64748b', bodyColor:'#f1f5f9', padding:12, cornerRadius:10 } },
       scales:{
-        x:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#334155', font:{size:11} } },
-        y:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#334155', font:{size:11} }, min:0, max:100,
-            border:{ dash:[4,4] } }
+        x:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#334155', font:{size:10} } },
+        y:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#334155', font:{size:10} }, min:0, max:100 }
+      }
+    }
+  });
+
+  // ── Horizontal Bar Chart (snapshot) ──
+  const hbarChart = new Chart(document.getElementById('hbarChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Soil Moisture', 'Temperature', 'Humidity'],
+      datasets:[{ data:[0,0,0],
+        backgroundColor:['rgba(34,197,94,0.85)','rgba(251,146,60,0.85)','rgba(56,189,248,0.85)'],
+        borderRadius: 8, borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'rgba(3,7,18,0.95)', borderColor:'rgba(255,255,255,0.08)', borderWidth:1, titleColor:'#64748b', bodyColor:'#f1f5f9', padding:12, cornerRadius:10 } },
+      scales:{
+        x:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#334155', font:{size:11} }, min:0, max:100 },
+        y:{ grid:{ display:false }, ticks:{ color:'#94a3b8', font:{size:13, weight:'600'} } }
       }
     }
   });
@@ -496,7 +526,6 @@
     const banner  = document.getElementById('sensorBanner');
     const pill    = document.getElementById('livePill');
     const liveText= document.getElementById('liveText');
-
     if (online) {
       banner.classList.remove('show');
       pill.classList.remove('offline');
@@ -512,11 +541,7 @@
     try {
       const res  = await fetch('/metrics-data');
       const data = await res.json();
-
-      const soil   = data.soil;
-      const temp   = data.temperature;
-      const humid  = data.humidity;
-      const status = data.status;
+      const soil=data.soil, temp=data.temperature, humid=data.humidity, status=data.status;
       const online = data.sensor_online !== false;
       setSensorState(online);
       if (!online && data.soil == null) return;
@@ -524,25 +549,21 @@
       document.getElementById('soilVal').textContent  = soil  != null ? Math.round(soil)  : '--';
       document.getElementById('tempVal').textContent  = temp  != null ? Math.round(temp)  : '--';
       document.getElementById('humidVal').textContent = humid != null ? Math.round(humid) : '--';
-
-      document.getElementById('soilBar').style.width  = soil  != null ? Math.min(soil,100)+'%'        : '0%';
+      document.getElementById('soilBar').style.width  = soil  != null ? Math.min(soil,100)+'%' : '0%';
       document.getElementById('tempBar').style.width  = temp  != null ? Math.min(temp/50*100,100)+'%' : '0%';
-      document.getElementById('humidBar').style.width = humid != null ? Math.min(humid,100)+'%'       : '0%';
+      document.getElementById('humidBar').style.width = humid != null ? Math.min(humid,100)+'%' : '0%';
 
-      trend(soil,  prevSoil,  'soilBadge');
-      trend(temp,  prevTemp,  'tempBadge');
+      trend(soil, prevSoil, 'soilBadge');
+      trend(temp, prevTemp, 'tempBadge');
       trend(humid, prevHumid, 'humidBadge');
       prevSoil=soil; prevTemp=temp; prevHumid=humid;
 
-      const si = document.getElementById('statusIcon');
-      const sv = document.getElementById('statusVal');
-      const sd = document.getElementById('statusDesc');
+      const si=document.getElementById('statusIcon'), sv=document.getElementById('statusVal'), sd=document.getElementById('statusDesc');
       if (status && status.includes('Irrigation')) {
         si.className='status-icon bad'; si.textContent='🚨';
         sv.className='s-val bad'; sv.textContent='Irrigation Alert';
-        sd.textContent='Soil moisture critically low — activate irrigation now';
-        alerts++;
-      } else if (status === 'Normal') {
+        sd.textContent='Soil moisture critically low — activate irrigation now'; alerts++;
+      } else if (status==='Normal') {
         si.className='status-icon ok'; si.textContent='✅';
         sv.className='s-val ok'; sv.textContent='All Systems Normal';
         sd.textContent='Field conditions are within optimal range';
@@ -554,17 +575,23 @@
 
       if (soil!=null && temp!=null && humid!=null) {
         const t = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-        chart.data.labels.push(t);
-        chart.data.datasets[0].data.push(soil);
-        chart.data.datasets[1].data.push(temp);
-        chart.data.datasets[2].data.push(humid);
-        if (chart.data.labels.length > 10) {
-          chart.data.labels.shift();
-          chart.data.datasets.forEach(d => d.data.shift());
+
+        // Grouped bar
+        barChart.data.labels.push(t);
+        barChart.data.datasets[0].data.push(soil);
+        barChart.data.datasets[1].data.push(temp);
+        barChart.data.datasets[2].data.push(humid);
+        if (barChart.data.labels.length > 8) {
+          barChart.data.labels.shift();
+          barChart.data.datasets.forEach(d => d.data.shift());
         }
-        chart.update();
-        soilArr.push(soil); tempArr.push(temp); humidArr.push(humid);
-        readings++;
+        barChart.update();
+
+        // Horizontal snapshot
+        hbarChart.data.datasets[0].data = [Math.round(soil), Math.round(temp), Math.round(humid)];
+        hbarChart.update();
+
+        soilArr.push(soil); tempArr.push(temp); humidArr.push(humid); readings++;
       }
 
       if (soilArr.length)  { document.getElementById('soilMin').textContent=Math.min(...soilArr);  document.getElementById('soilMax').textContent=Math.max(...soilArr); }
