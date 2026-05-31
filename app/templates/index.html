@@ -507,7 +507,25 @@
         x:{ grid:{ display:false }, ticks:{ color:'#94a3b8', font:{size:13, weight:'600'} } },
         y:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#334155', font:{size:11} }, min:0, max:100 }
       }
-    }
+    },
+    plugins:[{
+      id:'valueLabels',
+      afterDatasetsDraw(chart){
+        const ctx=chart.ctx;
+        chart.data.datasets.forEach((ds,i)=>{
+          chart.getDatasetMeta(i).data.forEach((bar,j)=>{
+            const val=ds.data[j];
+            if(val==null||val===0) return;
+            ctx.save();
+            ctx.fillStyle='#f1f5f9';
+            ctx.font='bold 13px Inter, sans-serif';
+            ctx.textAlign='center';
+            ctx.fillText(val, bar.x, bar.y-8);
+            ctx.restore();
+          });
+        });
+      }
+    }]
   });
 
   let alerts=0, readings=0, prevSoil=null, prevTemp=null, prevHumid=null;
@@ -543,7 +561,13 @@
       const soil=data.soil, temp=data.temperature, humid=data.humidity, status=data.status;
       const online = data.sensor_online !== false;
       setSensorState(online);
-      if (!online && data.soil == null) return;
+      if (!online) {
+        const si=document.getElementById('statusIcon'), sv=document.getElementById('statusVal'), sd=document.getElementById('statusDesc');
+        si.className='status-icon waiting'; si.textContent='📡';
+        sv.className='s-val wait'; sv.textContent='Sensor Offline';
+        sd.textContent='Showing last known data. Restart sensor to resume live monitoring.';
+      }
+      if (data.soil == null) return;
 
       document.getElementById('soilVal').textContent  = soil  != null ? Math.round(soil)  : '--';
       document.getElementById('tempVal').textContent  = temp  != null ? Math.round(temp)  : '--';
@@ -558,7 +582,9 @@
       prevSoil=soil; prevTemp=temp; prevHumid=humid;
 
       const si=document.getElementById('statusIcon'), sv=document.getElementById('statusVal'), sd=document.getElementById('statusDesc');
-      if (status && status.includes('Irrigation')) {
+      if (!online) {
+        // already handled above
+      } else if (status && status.includes('Irrigation')) {
         si.className='status-icon bad'; si.textContent='🚨';
         sv.className='s-val bad'; sv.textContent='Irrigation Alert';
         sd.textContent='Soil moisture critically low — activate irrigation now'; alerts++;
