@@ -1,6 +1,9 @@
 boto3
 prometheus_client
 flask
+flask-sqlalchemy
+werkzeug
+authlib
 requests
 gunicorn
 pandas
