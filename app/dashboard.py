@@ -25,18 +25,18 @@ FILE_PATH   = os.path.join(BASE_DIR, "sensor_data.csv")
 GMAIL_USER  = os.environ.get("GMAIL_USER", "")
 GMAIL_PASS  = os.environ.get("GMAIL_PASS", "")
 
-# ── Google OAuth ──────────────────────────────────────────────
-oauth = OAuth(app)
-google = oauth.register(
-    name="google",
-    client_id     = os.environ.get("GOOGLE_CLIENT_ID"),
-    client_secret = os.environ.get("GOOGLE_CLIENT_SECRET"),
-    server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration",
-    client_kwargs = {"scope": "openid email profile"}
-)
-
 # ── Alert state ───────────────────────────────────────────────
 last_alert_sent = {"irrigation": None, "offline": None}
+
+# ── Google OAuth ──────────────────────────────────────────────
+oauth  = OAuth(app)
+google = oauth.register(
+    name="google",
+    client_id           = os.environ.get("GOOGLE_CLIENT_ID"),
+    client_secret       = os.environ.get("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs       = {"scope": "openid email profile"}
+)
 
 # ── Model ─────────────────────────────────────────────────────
 class User(db.Model):
@@ -108,20 +108,6 @@ def offline_email():
       <div style="text-align:center;color:#475569;font-size:12px">{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Smart Agriculture</div>
     </div>"""
 
-def welcome_email(name):
-    return f"""
-    <div style="font-family:Inter,sans-serif;background:#030712;padding:32px;border-radius:16px;max-width:520px;margin:auto">
-      <div style="text-align:center;margin-bottom:24px">
-        <div style="font-size:48px">&#127807;</div>
-        <h2 style="color:#22c55e;margin:12px 0 4px;font-size:22px">Welcome, {name}!</h2>
-        <p style="color:#64748b;font-size:13px">Smart Agriculture Monitoring System</p>
-      </div>
-      <p style="color:#94a3b8;font-size:14px;text-align:center;line-height:1.7">
-        You are now registered. You will receive real-time alerts for<br>
-        irrigation warnings and sensor offline notifications.
-      </p>
-    </div>"""
-
 # ── S3 ────────────────────────────────────────────────────────
 def fetch_csv_from_s3():
     try:
@@ -158,13 +144,11 @@ def auth_callback():
     email = user_info["email"]
     name  = user_info.get("name", email.split("@")[0])
 
-    # Save user if first time
     user = User.query.filter_by(email=email).first()
     if not user:
         user = User(name=name, email=email)
         db.session.add(user)
         db.session.commit()
-        send_email(email, "Welcome to Smart Agriculture Dashboard", welcome_email(name))
 
     session["user_email"] = email
     session["user_name"]  = name
@@ -175,7 +159,7 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# ── Dashboard routes ──────────────────────────────────────────
+# ── Dashboard ─────────────────────────────────────────────────
 @app.route("/")
 @login_required
 def home():
