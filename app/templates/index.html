@@ -274,6 +274,46 @@
     .fstat .f-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
     .fstat .f-val   { font-size: 22px; font-weight: 800; color: #fff; margin-top: 8px; }
     .fstat .f-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    /* ══════════════════════════════════════
+       SPRINKLER CARD
+    ══════════════════════════════════════ */
+    .sprinkler-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 22px; padding: 26px;
+      display: flex; align-items: center; gap: 24px;
+      margin-bottom: 20px;
+      transition: transform .25s, box-shadow .25s;
+    }
+    .sprinkler-card.active {
+      border-color: rgba(56,189,248,0.4);
+      box-shadow: 0 0 32px rgba(56,189,248,0.12);
+    }
+    .sprinkler-icon {
+      width: 72px; height: 72px; border-radius: 20px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 34px;
+      background: rgba(71,85,105,0.2); transition: background .4s;
+    }
+    .sprinkler-card.active .sprinkler-icon {
+      background: rgba(56,189,248,0.15);
+      box-shadow: 0 0 24px rgba(56,189,248,0.25);
+      animation: sprinklerPulse 1.5s infinite;
+    }
+    @keyframes sprinklerPulse { 0%,100%{box-shadow:0 0 24px rgba(56,189,248,0.25)} 50%{box-shadow:0 0 40px rgba(56,189,248,0.5)} }
+    .sprinkler-info { flex: 1; }
+    .sprinkler-info .sp-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .sprinkler-info .sp-val   { font-size: 28px; font-weight: 800; margin-top: 6px; color: var(--muted); transition: color .4s; }
+    .sprinkler-card.active .sp-val { color: var(--blue); }
+    .sprinkler-info .sp-desc  { font-size: 13px; color: var(--muted); margin-top: 5px; }
+    .sp-badge {
+      padding: 8px 20px; border-radius: 999px; font-size: 13px; font-weight: 700;
+      background: rgba(71,85,105,0.2); color: var(--muted); border: 1px solid var(--border);
+      transition: all .4s; white-space: nowrap;
+    }
+    .sprinkler-card.active .sp-badge {
+      background: rgba(56,189,248,0.15); color: var(--blue);
+      border-color: rgba(56,189,248,0.4);
+    }
   </style>
 </head>
 <body>
@@ -392,6 +432,17 @@
         <div class="i-sub">Cloud sync</div>
       </div>
     </div>
+  </div>
+
+  <!-- ── Sprinkler Control ── -->
+  <div class="sprinkler-card" id="sprinklerCard">
+    <div class="sprinkler-icon" id="sprinklerIcon">💧</div>
+    <div class="sprinkler-info">
+      <div class="sp-label">Sprinkler / Motor</div>
+      <div class="sp-val" id="sprinklerVal">OFF</div>
+      <div class="sp-desc" id="sprinklerDesc">Waiting for sensor data. Motor activates automatically when soil moisture drops below 30%.</div>
+    </div>
+    <div class="sp-badge" id="sprinklerBadge">🔴 MOTOR OFF</div>
   </div>
 
   <!-- ── Charts Row ── -->
@@ -560,7 +611,21 @@
       const data = await res.json();
       const soil=data.soil, temp=data.temperature, humid=data.humidity, status=data.status;
       const online = data.sensor_online !== false;
+      const sprinkler = data.sprinkler_on === true;
       setSensorState(online);
+
+      // Sprinkler state
+      const sc=document.getElementById('sprinklerCard'), sv2=document.getElementById('sprinklerVal');
+      const sd2=document.getElementById('sprinklerDesc'), sb=document.getElementById('sprinklerBadge');
+      if (sprinkler) {
+        sc.classList.add('active');
+        sv2.textContent='ON'; sb.textContent='🟢 MOTOR RUNNING';
+        sd2.textContent='Soil moisture critically low — sprinkler activated automatically.';
+      } else {
+        sc.classList.remove('active');
+        sv2.textContent='OFF'; sb.textContent='🔴 MOTOR OFF';
+        sd2.textContent='Soil moisture is normal — sprinkler turned off automatically.';
+      }
       if (!online) {
         const si=document.getElementById('statusIcon'), sv=document.getElementById('statusVal'), sd=document.getElementById('statusDesc');
         si.className='status-icon waiting'; si.textContent='📡';

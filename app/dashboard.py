@@ -6,8 +6,9 @@ import os
 app = Flask(__name__)
 
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
-BUCKET_NAME = os.environ.get("S3_BUCKET", "smart-agri-bucket1")
-FILE_PATH   = os.path.join(BASE_DIR, "sensor_data.csv")
+BUCKET_NAME   = os.environ.get("S3_BUCKET", "smart-agri-bucket1")
+FILE_PATH     = os.path.join(BASE_DIR, "sensor_data.csv")
+sprinkler_on  = False
 
 def fetch_csv_from_s3():
     try:
@@ -40,7 +41,13 @@ def metrics_data():
         soil        = float(latest["soil_moisture"])
         temperature = float(latest["temperature"])
         humidity    = float(latest["humidity"])
-        status      = "Irrigation Alert" if soil < 30 else "Normal"
+        global sprinkler_on
+        if soil < 30:
+            status = "Irrigation Alert"
+            sprinkler_on = True
+        else:
+            status = "Normal"
+            sprinkler_on = False
         # Check if data is stale (older than 30 seconds)
         from datetime import datetime, timezone
         sensor_online = False
@@ -54,7 +61,8 @@ def metrics_data():
         else:
             sensor_online = s3_ok
         return jsonify({"soil": soil, "temperature": temperature,
-                        "humidity": humidity, "status": status, "sensor_online": sensor_online})
+                        "humidity": humidity, "status": status,
+                        "sensor_online": sensor_online, "sprinkler_on": sprinkler_on})
     except Exception as e:
         print("metrics_data error: " + str(e))
         return jsonify({"soil": None, "temperature": None, "humidity": None,
