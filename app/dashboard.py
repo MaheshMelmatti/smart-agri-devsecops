@@ -45,10 +45,17 @@ def home():
 @app.route("/metrics-data")
 def metrics_data():
     try:
-        s3_ok = fetch_csv_from_s3()
-        if not s3_ok and not os.path.exists(FILE_PATH):
+        from datetime import datetime, timezone
+        # Check S3 LastModified FIRST — fast head_object call
+        age = get_s3_last_modified()
+        sensor_online = (age is not None and age <= 15)
+
+        # Only download CSV if sensor is online or no local file exists
+        if sensor_online:
+            fetch_csv_from_s3()
+        elif not os.path.exists(FILE_PATH):
             return jsonify({"soil": None, "temperature": None, "humidity": None,
-                            "status": "No Data", "sensor_online": False})
+                            "status": "No Data", "sensor_online": False, "sprinkler_on": False})
         df = pd.read_csv(FILE_PATH)
         df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
         latest      = df.iloc[-1]
@@ -62,12 +69,6 @@ def metrics_data():
         else:
             status = "Normal"
             sprinkler_on = False
-        # Check sensor online via S3 LastModified (sensor uploads every 10s, allow 30s grace)
-        age = get_s3_last_modified()
-        if age is not None:
-            sensor_online = age <= 30
-        else:
-            sensor_online = False
         return jsonify({"soil": soil, "temperature": temperature,
                         "humidity": humidity, "status": status,
                         "sensor_online": sensor_online, "sprinkler_on": sprinkler_on})
