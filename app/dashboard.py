@@ -41,8 +41,20 @@ def metrics_data():
         temperature = float(latest["temperature"])
         humidity    = float(latest["humidity"])
         status      = "Irrigation Alert" if soil < 30 else "Normal"
+        # Check if data is stale (older than 30 seconds)
+        from datetime import datetime, timezone
+        sensor_online = False
+        if "timestamp" in df.columns:
+            try:
+                last_ts = datetime.strptime(str(latest["timestamp"]), "%Y-%m-%d %H:%M:%S")
+                age = (datetime.now() - last_ts).total_seconds()
+                sensor_online = age <= 30
+            except Exception:
+                sensor_online = s3_ok
+        else:
+            sensor_online = s3_ok
         return jsonify({"soil": soil, "temperature": temperature,
-                        "humidity": humidity, "status": status, "sensor_online": s3_ok})
+                        "humidity": humidity, "status": status, "sensor_online": sensor_online})
     except Exception as e:
         print("metrics_data error: " + str(e))
         return jsonify({"soil": None, "temperature": None, "humidity": None,

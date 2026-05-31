@@ -302,8 +302,8 @@
     <div class="sb-dot"></div>
     <div class="sb-icon">📡</div>
     <div class="sb-text">
-      <div class="sb-title">⚠️ Sensor Not Connected</div>
-      <div class="sb-desc">No live data available. Please connect and run the sensor to see real-time field data.</div>
+      <div class="sb-title">⚠️ Sensor Offline — Showing Last Known Data</div>
+      <div class="sb-desc">Live feed stopped. The values below are the last recorded readings. Restart the sensor to resume live monitoring.</div>
     </div>
     <div class="sb-cmd">python sensor.py</div>
   </div>
@@ -402,7 +402,7 @@
       <div class="chart-top">
         <div>
           <div class="chart-title">Sensor Readings</div>
-          <div class="chart-sub">Grouped bar — last 8 readings</div>
+          <div class="chart-sub">Line graph — last 8 readings</div>
         </div>
         <div class="legend">
           <div class="leg"><div class="leg-line" style="background:#22c55e"></div>Soil</div>
@@ -468,15 +468,15 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
-  // ── Grouped Bar Chart ──
+  // ── Line Chart ──
   const barChart = new Chart(document.getElementById('barChart'), {
-    type: 'bar',
+    type: 'line',
     data: {
       labels: [],
       datasets: [
-        { label:'Soil Moisture', data:[], backgroundColor:'rgba(34,197,94,0.8)',  borderRadius:6, borderSkipped:false },
-        { label:'Temperature',   data:[], backgroundColor:'rgba(251,146,60,0.8)', borderRadius:6, borderSkipped:false },
-        { label:'Humidity',      data:[], backgroundColor:'rgba(56,189,248,0.8)', borderRadius:6, borderSkipped:false }
+        { label:'Soil Moisture', data:[], borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.08)',  borderWidth:2, pointRadius:3, pointBackgroundColor:'#22c55e', tension:0.4, fill:true },
+        { label:'Temperature',   data:[], borderColor:'#fb923c', backgroundColor:'rgba(251,146,60,0.08)', borderWidth:2, pointRadius:3, pointBackgroundColor:'#fb923c', tension:0.4, fill:true },
+        { label:'Humidity',      data:[], borderColor:'#38bdf8', backgroundColor:'rgba(56,189,248,0.08)', borderWidth:2, pointRadius:3, pointBackgroundColor:'#38bdf8', tension:0.4, fill:true }
       ]
     },
     options: {
@@ -490,7 +490,7 @@
     }
   });
 
-  // ── Horizontal Bar Chart (snapshot) ──
+  // ── Vertical Bar Chart (snapshot) ──
   const hbarChart = new Chart(document.getElementById('hbarChart'), {
     type: 'bar',
     data: {
@@ -501,12 +501,11 @@
       }]
     },
     options: {
-      indexAxis: 'y',
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'rgba(3,7,18,0.95)', borderColor:'rgba(255,255,255,0.08)', borderWidth:1, titleColor:'#64748b', bodyColor:'#f1f5f9', padding:12, cornerRadius:10 } },
       scales:{
-        x:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#334155', font:{size:11} }, min:0, max:100 },
-        y:{ grid:{ display:false }, ticks:{ color:'#94a3b8', font:{size:13, weight:'600'} } }
+        x:{ grid:{ display:false }, ticks:{ color:'#94a3b8', font:{size:13, weight:'600'} } },
+        y:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#334155', font:{size:11} }, min:0, max:100 }
       }
     }
   });
