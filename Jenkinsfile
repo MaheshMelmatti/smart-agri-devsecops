@@ -21,6 +21,8 @@ pipeline {
                 sh '''
                 docker stop smart-agri-container || true
                 docker rm smart-agri-container || true
+
+                sudo fuser -k 5000/tcp || true
                 '''
             }
         }
@@ -38,18 +40,21 @@ pipeline {
 
         stage('Verify Deployment') {
             steps {
-                sh 'docker ps'
+                sh '''
+                docker ps
+                curl -I http://localhost:5000 || true
+                '''
             }
         }
     }
 
     post {
         success {
-            echo 'Build and Deployment Successful!'
+            echo 'CI/CD Pipeline Completed Successfully!'
         }
 
         failure {
-            echo 'Build Failed!'
+            echo 'CI/CD Pipeline Failed!'
         }
     }
 }
