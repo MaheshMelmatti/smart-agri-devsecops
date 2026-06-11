@@ -1,27 +1,62 @@
 pipeline {
-    agent any
+agent any
 
-    stages {
+```
+stages {
 
-        stage('Checkout Code') {
-            steps {
-                git branch: 'devsecops-pipeline',
+    stage('GitHub Checkout') {
+        steps {
+            git branch: 'devsecops-pipeline',
                 url: 'https://github.com/MaheshMelmatti/smart-agri-devsecops.git'
-            }
-        }
-
-        stage('Docker Build') {
-            steps {
-                bat 'docker build -t smart-agri ./app'
-            }
-        }
-
-        stage('Run Docker Container') {
-            steps {
-                bat 'docker stop smart-agri-container || exit 0'
-                bat 'docker rm smart-agri-container || exit 0'
-                bat 'docker run -d --name smart-agri-container -p 5000:5000 smart-agri'
-            }
         }
     }
+
+    stage('Docker Build') {
+        steps {
+            sh '''
+            docker build -t smart-agri ./app
+            '''
+        }
+    }
+
+    stage('Stop Old Container') {
+        steps {
+            sh '''
+            docker stop smart-agri-container || true
+            docker rm smart-agri-container || true
+            '''
+        }
+    }
+
+    stage('Run Docker Container') {
+        steps {
+            sh '''
+            docker run -d \
+            --name smart-agri-container \
+            -p 5000:5000 \
+            smart-agri
+            '''
+        }
+    }
+
+    stage('Verify Deployment') {
+        steps {
+            sh '''
+            docker ps
+            '''
+        }
+    }
+}
+
+post {
+    success {
+        echo 'Build and Deployment Successful!'
+    }
+
+    failure {
+        echo 'Build Failed!'
+    }
+}
+```
+
 }
