@@ -11,13 +11,13 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                bat 'docker build -t smart-agri ./app'
+                sh 'docker build -t smart-agri ./app'
             }
         }
 
         stage('Run Docker Container') {
             steps {
-                bat 'docker run -d smart-agri'
+                sh 'docker run -d smart-agri'
             }
         }
     }
